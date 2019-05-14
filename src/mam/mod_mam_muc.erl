@@ -52,7 +52,6 @@
 
 %% gdpr callbacks
 -behaviour(gdpr).
--export([get_personal_data/2]).
 
 %% private
 -export([archive_message/8]).
@@ -60,6 +59,9 @@
 -export([archive_id_int/2]).
 -export([handle_set_message_form/3]).
 -export([handle_lookup_result/4]).
+
+%% GDPR related
+-export([get_personal_data/2]).
 %% ----------------------------------------------------------------------
 %% Imports
 
@@ -650,3 +652,23 @@ is_archivable_message(Host, Dir, Packet) ->
     {M, F} = mod_mam_params:is_archivable_message_fun(?MODULE, Host),
     ArchiveChatMarkers = mod_mam_params:archive_chat_markers(?MODULE, Host),
     erlang:apply(M, F, [?MODULE, Dir, Packet, ArchiveChatMarkers]).
+
+-spec get_personal_data(jid:user(), jid:server()) ->
+    [{gdpr:data_group(), gdpr:schema(), gdpr:entries()}].
+get_personal_data(Username, Server) ->
+    LServer = jid:nameprep(Server),
+    Schema = ["jid", "message"],
+    Jid = jid:to_binary({Username, LServer}),
+    Entries = lists:flatmap(fun(B) ->
+        try B:get_mam_muc_gdpr_data(Username, LServer) of
+            {ok, []} ->
+                [{Jid, []}];
+            {ok, Records} ->
+                [{Jid, exml:to_binary(M)} || M <- Records];
+            _ -> []
+        catch
+            _:_ ->
+                []
+        end
+                            end, mongoose_lib:find_behaviour_implementations(ejabberd_gen_mam_archive)),
+    [{mam_muc, Schema, Entries}].

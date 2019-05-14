@@ -26,7 +26,7 @@
          purge_multiple_messages/9]).
 
 %% Called from mod_mam_rdbms_async_writer
--export([prepare_message/8, prepare_insert/2]).
+-export([prepare_message/8, prepare_insert/2, get_mam_muc_gdpr_data/2]).
 
 
 %% ----------------------------------------------------------------------
@@ -334,6 +334,18 @@ lookup_messages(Host, RoomID, RoomJID = #jid{},
     {ok, {TotalCount, Offset,
           rows_to_uniform_format(MessageRows, Host, RoomJID)}}.
 
+-spec get_mam_muc_gdpr_data(jid:username(), jid:server()) -> {ok, mod_mam:messages()}.
+get_mam_muc_gdpr_data(Username, LServer) ->
+    LUser = jid:nodeprep(Username),
+    WithJID = jid:to_binary({LUser, LServer}),
+    %% TODO What is PageSize ?
+    SWithNick = mongoose_rdbms:escape_string(WithJID),
+    Filter = make_filter_nickname_only(SWithNick),
+    Rows = extract_messages(LServer, Filter, 0, 50, false),
+    Messages = [Message || {_Id, _NickName, Message} <- Rows],
+    Decoded = [stored_binary_to_packet(LServer, mongoose_rdbms:unescape_binary(LServer, M)) || M <- Messages],
+    {ok, Decoded}.
+
 -spec after_id(ID :: escaped_message_id(), Filter :: filter()) -> filter().
 after_id(ID, Filter) ->
     SID = escape_message_id(ID),
@@ -543,6 +555,9 @@ make_filter(RoomID, StartID, EndID, SWithNick, SearchText) ->
          _         -> prepare_search_filters(SearchText)
      end
     ].
+
+make_filter_nickname_only(SWithNick) ->
+    ["WHERE nick_name=", use_escaped_string(SWithNick)].
 
 %% Constructs a separate LIKE filter for each word.
 %% SearchText example is "word1%word2%word3".

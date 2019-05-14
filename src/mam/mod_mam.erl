@@ -123,6 +123,8 @@
                           Offset :: non_neg_integer() | undefined,
                           MessageRows :: [{message_id(), jid:jid(), exml:element()}]}.
 
+-type messages() :: list(exml:element()).
+
 %% Internal types
 -type iterator_fun() :: fun(() -> {'ok', {_, _}}).
 -type rewriter_fun() :: fun((JID :: jid:literal_jid())
