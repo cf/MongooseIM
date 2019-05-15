@@ -650,6 +650,5 @@ report_issue(Reason, Stacktrace, Issue, #jid{lserver = LServer, luser = LUser}, 
                             Packet :: exml:element()) -> boolean().
 is_archivable_message(Host, Dir, Packet) ->
     {M, F} = mod_mam_params:is_archivable_message_fun(?MODULE, Host),
-    ArchiveChatMarkers '
-'= mod_mam_params:archive_chat_markers(?MODULE, Host),
+    ArchiveChatMarkers = mod_mam_params:archive_chat_markers(?MODULE, Host),
     erlang:apply(M, F, [?MODULE, Dir, Packet, ArchiveChatMarkers]).
