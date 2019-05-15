@@ -93,7 +93,7 @@ groups() ->
                               data_is_not_retrieved_for_missing_user
                              ]},
      {retrieve_personal_data_mam, [], [
-                                       retrieve_mam_pm,
+%%                                       retrieve_mam_pm,
                                        retrieve_mam_muc_light]}
     ].
 
@@ -258,17 +258,15 @@ retrieve_mam_muc_light(Config) ->
             muc_light_helper:then_muc_light_message_is_received_by([Alice,Bob], {Room, Body2, <<"Id2">>}),
 
             mam_helper:wait_for_room_archive_size(Domain, Room, 3),
-            JIDAlice = binary_to_list(escalus_client:short_jid(Alice)),
-            JIDBob = binary_to_list(escalus_client:short_jid(Bob)),
+            Server = escalus_client:server(Bob),
 
-            ExpectedItemsAlice = [#{"jid" => JIDAlice, "message" => [{contains, binary_to_list(Body1)}]},
-                                  #{"jid" => JIDAlice, "message" => [{contains, binary_to_list(Body2)}]}],
-            ExpectedItemsBob =  [#{"jid" => JIDBob, "message" => []}],
+            ExpectedItemsAlice = [#{"message" => [{contains, binary_to_list(Body1)}]},
+                                  #{"message" => [{contains, binary_to_list(Body2)}]}],
 
             maybe_stop_and_unload_module(mod_mam_muc, mod_mam_muc_rdbms_arch, Config),
 
-            retrieve_and_validate_personal_data(Alice, Config, "mam_muc", ["jid", "message"], ExpectedItemsAlice),
-            retrieve_and_validate_personal_data(Bob, Config, "mam_muc", ["jid", "message"],ExpectedItemsBob)
+            retrieve_and_validate_personal_data(Alice, Config, "mam_muc", ["id", "message"], ExpectedItemsAlice),
+            refute_personal_data_file(Bob, Server, Config)
         end,
     escalus_fresh:story(Config, [{alice, 1}, {bob, 1}], F).
 
@@ -656,6 +654,9 @@ request_and_unzip_personal_data(User, Domain, Config) ->
     Dir = Filename ++ ".unzipped",
     {ok, _} = zip:extract(FullPath, [{cwd,Dir}]),
     Dir.
+
+refute_personal_data_file(User, Domain, Config) ->
+    {_Filename, 1, _} = retrieve_personal_data(User, Domain, Config).
 
 retrieve_personal_data(User, Domain, Config) ->
     Filename = random_filename(Config),

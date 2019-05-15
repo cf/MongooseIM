@@ -342,8 +342,8 @@ get_mam_muc_gdpr_data(Username, LServer) ->
     SWithNick = mongoose_rdbms:escape_string(WithJID),
     Filter = make_filter_nickname_only(SWithNick),
     Rows = extract_messages(LServer, Filter, 0, 50, false),
-    Messages = [Message || {_Id, _NickName, Message} <- Rows],
-    Decoded = [stored_binary_to_packet(LServer, mongoose_rdbms:unescape_binary(LServer, M)) || M <- Messages],
+    MessagesWithIds = [{Id, Message} || {Id, _NickName, Message} <- Rows],
+    Decoded = [{Id, stored_binary_to_packet(LServer, mongoose_rdbms:unescape_binary(LServer, M))} || {Id, M} <- MessagesWithIds],
     {ok, Decoded}.
 
 -spec after_id(ID :: escaped_message_id(), Filter :: filter()) -> filter().
